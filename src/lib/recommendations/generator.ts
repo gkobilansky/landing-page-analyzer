@@ -15,6 +15,7 @@ import {
   RecommendationOutput,
   RecommendationCategory,
 } from './types'
+import { enhanceFontContext } from './templates/fonts'
 
 /**
  * Interpolate variables in a template string
@@ -116,7 +117,14 @@ export function generateCategoryRecommendations(
   category: RecommendationCategory
 ): RecommendationOutput {
   const categoryTemplates = templates.filter((t) => t.category === category)
-  return generateRecommendations(categoryTemplates, ctx)
+
+  // Enhance context with category-specific computed values
+  let enhancedCtx = ctx
+  if (category === 'fonts') {
+    enhancedCtx = enhanceFontContext(ctx)
+  }
+
+  return generateRecommendations(categoryTemplates, enhancedCtx)
 }
 
 /**

@@ -6,6 +6,24 @@
  */
 
 import { RecommendationTemplate, RecommendationContext } from '../types'
+import { suggestModernStacks, FontStackSuggestion } from '../../modern-font-stacks'
+
+/**
+ * Helper to get modern font stack suggestions from context
+ */
+function getStackSuggestions(ctx: RecommendationContext): FontStackSuggestion[] {
+  if (!ctx.fontFamilies || ctx.fontFamilies.length === 0) {
+    return []
+  }
+  return suggestModernStacks(ctx.fontFamilies)
+}
+
+/**
+ * Format a single stack suggestion as a recommendation string
+ */
+function formatStackSuggestion(suggestion: FontStackSuggestion): string {
+  return `Replace "${suggestion.detectedFont}" with the ${suggestion.suggestedStack.name} stack: \`${suggestion.suggestedStack.stack}\` — ${suggestion.suggestedStack.description}`
+}
 
 export const fontRecommendations: RecommendationTemplate[] = [
   // High Impact - Too many web fonts
@@ -114,4 +132,71 @@ export const fontRecommendations: RecommendationTemplate[] = [
       'Add size-adjusted fallback fonts to minimize Cumulative Layout Shift (CLS) from font swapping.',
     ],
   },
+
+  // Modern Font Stack Suggestions - High Impact when web fonts detected
+  {
+    id: 'fonts-modern-stack-primary',
+    category: 'fonts',
+    impact: 'High',
+    condition: (ctx: RecommendationContext) => {
+      const suggestions = getStackSuggestions(ctx)
+      return suggestions.length > 0 && (ctx.webFontCount || 0) > 0
+    },
+    templates: [
+      // Dynamic template that gets the first suggestion
+      '{{modernStackSuggestion}}',
+    ],
+    affectedArea: 'typography',
+  },
+
+  // Modern Font Stack - Secondary suggestion
+  {
+    id: 'fonts-modern-stack-secondary',
+    category: 'fonts',
+    impact: 'Medium',
+    condition: (ctx: RecommendationContext) => {
+      const suggestions = getStackSuggestions(ctx)
+      return suggestions.length > 1
+    },
+    templates: [
+      '{{modernStackSuggestionSecondary}}',
+    ],
+    affectedArea: 'typography',
+  },
+
+  // Modern Font Stack - General awareness
+  {
+    id: 'fonts-modern-stack-awareness',
+    category: 'fonts',
+    impact: 'Low',
+    condition: (ctx: RecommendationContext) => {
+      const suggestions = getStackSuggestions(ctx)
+      return suggestions.length === 0 && (ctx.webFontCount || 0) > 0
+    },
+    templates: [
+      'Consider Modern Font Stacks (modernfontstacks.com) - system fonts with zero download time and instant rendering.',
+      'Explore system font stacks at modernfontstacks.com for performance-optimized alternatives to web fonts.',
+    ],
+    affectedArea: 'typography',
+  },
 ]
+
+/**
+ * Enhance context with modern font stack suggestions
+ * This is called by the generator to add dynamic values
+ */
+export function enhanceFontContext(ctx: RecommendationContext): RecommendationContext {
+  const suggestions = getStackSuggestions(ctx)
+
+  const enhanced = { ...ctx }
+
+  if (suggestions.length > 0) {
+    enhanced.modernStackSuggestion = formatStackSuggestion(suggestions[0])
+  }
+
+  if (suggestions.length > 1) {
+    enhanced.modernStackSuggestionSecondary = formatStackSuggestion(suggestions[1])
+  }
+
+  return enhanced
+}
